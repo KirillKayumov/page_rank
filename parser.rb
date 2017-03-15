@@ -1,20 +1,24 @@
-require "capybara/dsl"
-require "capybara-webkit"
+# require "capybara/dsl"
+# require "capybara-webkit"
+require "open-uri"
+require "nokogiri"
 require "pry"
 
 require_relative "page"
 
-Capybara.run_server = false
-Capybara.current_driver = :webkit
-
-Capybara::Webkit.configure do |config|
-  config.allow_unknown_urls
-end
+# Capybara.run_server = false
+# Capybara.current_driver = :webkit
+#
+# Capybara::Webkit.configure do |config|
+#   config.allow_unknown_urls
+# end
 
 class Parser
-  include Capybara::DSL
+  # include Capybara::DSL
+  HOST = "https://meduza.io"
 
-  attr_reader :matrix, :pages
+  attr_accessor :matrix, :pages
+  attr_accessor :pages
 
   def initialize
     @matrix = []
@@ -22,7 +26,7 @@ class Parser
   end
 
   def perform
-    start_page = Page.new("https://meduza.io/")
+    start_page = Page.new(HOST)
     pages << start_page
 
     build_matrix(start_page.url)
@@ -35,38 +39,39 @@ class Parser
     index = 0
 
     while keep_building?
-      begin
-        visit url
-        current_page = pages[index]
-        puts "VISIT #{current_page.url}"
+      document = Nokogiri::HTML(open(url))
+      current_page = pages[index]
+      puts "PARSE #{current_page.url}"
 
-        pages_on_current_page = all("a", visible: true).map do |link|
-          href = link[:href]
-          url = if href =~ /^\//
-            page.current_host + href
-          elsif href =~ /^https?\:\/\/meduza.io/
-            href
-          end
+      pages_on_current_page = document.css("a").map do |link|
+        href = link[:href]
+        url = if href =~ /^\//
+          HOST + href
+        elsif href =~ /^https?\:\/\/meduza.io/
+          href
+        end
 
-          next unless url
+        next unless url
 
-          Page.new(url)
-        end.compact.uniq
+        Page.new(url)
+      end.compact.uniq
 
-        pages.concat(pages_on_current_page).uniq! if pages.size < 10
+      pages.concat(pages_on_current_page).uniq! if pages.size < 100
 
-        matrix_row = pages.map { |page| pages_on_current_page.include?(page) ? 1.0 / pages_on_current_page.size : 0 }
-        matrix[index] = matrix_row
-      rescue Capybara::Webkit::NodeNotAttachedError, Capybara::Webkit::InvalidResponseError
-      ensure
-        pages[index].visit!
-        index += 1
-        url = pages[index]&.url
+      matrix_row = pages.map do |page|
+        pages_on_current_page.include?(page) ? (1.0 / pages_on_current_page.size).round(2) : 0
       end
+      self.matrix[index] = matrix_row
+
+      pages[index].visit!
+      index += 1
+      url = pages[index]&.url
     end
-binding.pry
-    pages.map!.with_index { |page, index| matrix[index] && page }.compact!
-    matrix.compact!
+
+    matrix.map! do |row|
+      row + [0] * (pages.size - row.size)
+    end
+    self.matrix = matrix.transpose
   end
 
   def keep_building?
