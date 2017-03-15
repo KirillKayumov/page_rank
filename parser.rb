@@ -1,36 +1,30 @@
-# require "capybara/dsl"
-# require "capybara-webkit"
+require "uri"
 require "open-uri"
+require 'open_uri_redirections'
 require "nokogiri"
 require "pry"
 
 require_relative "page"
 
-# Capybara.run_server = false
-# Capybara.current_driver = :webkit
-#
-# Capybara::Webkit.configure do |config|
-#   config.allow_unknown_urls
-# end
-
 class Parser
-  # include Capybara::DSL
-  HOST = "https://meduza.io"
+  attr_accessor :matrix, :pages, :domain, :host
 
-  attr_accessor :matrix, :pages
-  attr_accessor :pages
-
-  def initialize
+  def initialize(domain)
+    @domain = domain
+    @host = URI.parse(domain).host
     @matrix = []
     @pages = []
   end
 
-  def perform
-    start_page = Page.new(HOST)
+  def perform!
+    start_page = Page.new(domain)
     pages << start_page
 
     build_matrix(start_page.url)
-    binding.pry
+  end
+
+  def check
+    binding.pry unless matrix.transpose.all? { |row| row.reduce(:+).round(3) == 1.0 }
   end
 
   private
@@ -39,28 +33,32 @@ class Parser
     index = 0
 
     while keep_building?
-      document = Nokogiri::HTML(open(url))
+      document = Nokogiri::HTML(open(url, allow_redirections: :all))
       current_page = pages[index]
       puts "PARSE #{current_page.url}"
 
       pages_on_current_page = document.css("a").map do |link|
         href = link[:href]
-        url = if href =~ /^\//
-          HOST + href
-        elsif href =~ /^https?\:\/\/meduza.io/
+        next_url = if href =~ /^\//
+          domain + href
+        elsif href =~ /^https?\:\/\/#{host}/
           href
         end
 
-        next unless url
+        next unless next_url
 
-        Page.new(url)
+        next_page = Page.new(next_url)
+        next if next_page.url == url
+        next_page
       end.compact.uniq
 
       pages.concat(pages_on_current_page).uniq! if pages.size < 100
 
       matrix_row = pages.map do |page|
-        pages_on_current_page.include?(page) ? (1.0 / pages_on_current_page.size).round(2) : 0
+        pages_on_current_page.include?(page) ? (1.0 / (pages_on_current_page & pages).size) : 0
       end
+      # binding.pry if url.end_with?("/en")
+
       self.matrix[index] = matrix_row
 
       pages[index].visit!
@@ -81,4 +79,4 @@ class Parser
   end
 end
 
-Parser.new.perform
+# Parser.new.perform
