@@ -2,7 +2,7 @@ require_relative "parser"
 
 ROUND_NUMBERS = 3
 
-parser = Parser.new("http://www.math.cornell.edu")
+parser = Parser.new("https://meduza.io")
 parser.perform!
 parser.check
 
@@ -24,7 +24,7 @@ pages = parser.pages
 #   [1.0 / 3, 1.0 / 2, 0, 1.0 / 2],
 #   [1.0 / 3, 1.0 / 2, 0, 0]
 # ]
-ranks = [1.0 / matrix.size] * matrix.size
+ranks = [0.85] * matrix.size
 
 loop do
   next_ranks = ranks.map.with_index do |rank, index|

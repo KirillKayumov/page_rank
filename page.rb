@@ -1,10 +1,17 @@
 class Page
   attr_reader :url
-  attr_accessor :visited
+  attr_accessor :visited, :pages
 
   def initialize(url)
+    return unless url
+
     @url = url.gsub(/\?.*/, "").chomp("/")
     @visited = false
+    @pages = []
+  end
+
+  def valid?
+    !url.nil?
   end
 
   def visited?
