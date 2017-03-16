@@ -1,6 +1,8 @@
 class Page
   attr_reader :url
-  attr_accessor :visited, :pages
+  attr_accessor :visited, :pages, :rank, :next_rank
+
+  FADING = 0.85
 
   def initialize(url)
     return unless url
@@ -8,6 +10,16 @@ class Page
     @url = url.gsub(/\?.*/, "").chomp("/")
     @visited = false
     @pages = []
+    @rank = 1
+    @next_rank = 1
+  end
+
+  def out_rank
+    rank * FADING / pages.size
+  end
+
+  def update_rank!
+    self.rank = next_rank
   end
 
   def valid?

@@ -39,8 +39,6 @@ class Parser
         puts "PARSE #{current_page.url}"
 
         pages_on_current_page = document.css("a").map do |link|
-          # next unless link[:href]
-
           begin
             href = link[:href]&.strip
             url = if href =~ /^\//
@@ -57,7 +55,7 @@ class Parser
           page
         end.compact.uniq
 
-        pages.concat(pages_on_current_page).uniq! if pages.size < 100
+        pages.concat(pages_on_current_page).uniq! if pages.size < 10
         current_page.pages = pages_on_current_page
         index += 1
       rescue OpenURI::HTTPError
@@ -65,55 +63,47 @@ class Parser
       end
     end
 
+    # self.pages = [
+    #   Page.new("A"),
+    #   Page.new("B"),
+    #   Page.new("C"),
+    #   Page.new("D"),
+    # ]
+    # pages[0].pages = [pages[1], pages[2]]
+    # pages[1].pages = [pages[2]]
+    # pages[2].pages = [pages[0]]
+    # pages[3].pages = [pages[2]]
+
     pages.each.with_index do |current_page, index|
-      pages_count = (pages & current_page.pages).size
+      current_page.pages = pages & current_page.pages
 
       self.matrix[index] = pages.map do |page|
-        current_page.pages.include?(page) ? 1.0 / pages_count : 0.0
+        current_page.pages.include?(page) ? 1 : 0
       end
     end
 
     self.matrix = matrix.transpose
-    # index = 0
+
+    5.times do
+      pages.each.with_index do |page, current_index|
+        matrix[current_index].each.with_index do |elem, index|
+          pages[current_index].next_rank += pages[index].out_rank if elem == 1
+        end
+      end
+
+      pages.each(&:update_rank!)
+    end
+
+    # pages.each.with_index do |current_page, index|
+    #   pages_count = (pages & current_page.pages).size
     #
-    # while keep_building?
-    #   document = Nokogiri::HTML(open(url, allow_redirections: :all))
-    #   current_page = pages[index]
-    #   puts "PARSE #{current_page.url}"
-    #
-    #   pages_on_current_page = document.css("a").map do |link|
-    #     href = link[:href]
-    #     next_url = if href =~ /^\//
-    #       domain + href
-    #     elsif href =~ /^https?\:\/\/#{host}/
-    #       href
-    #     end
-    #
-    #     next unless next_url
-    #
-    #     next_page = Page.new(next_url)
-    #     next if next_page.url == url
-    #     next_page
-    #   end.compact.uniq
-    #
-    #   pages.concat(pages_on_current_page).uniq! if pages.size < 100
-    #
-    #   matrix_row = pages.map do |page|
-    #     pages_on_current_page.include?(page) ? (1.0 / (pages_on_current_page & pages).size) : 0
+    #   self.matrix[index] = pages.map do |page|
+    #     current_page.pages.include?(page) ? 1.0 / pages_count : 0.0
     #   end
-    #   # binding.pry if url.end_with?("/en")
-    #
-    #   self.matrix[index] = matrix_row
-    #
-    #   pages[index].visit!
-    #   index += 1
-    #   url = pages[index]&.url
     # end
     #
-    # matrix.map! do |row|
-    #   row + [0] * (pages.size - row.size)
-    # end
     # self.matrix = matrix.transpose
+    # index = 0
   end
 
   def keep_building?
