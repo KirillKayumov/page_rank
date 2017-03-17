@@ -7,11 +7,11 @@ class Page
   def initialize(url)
     return unless url
 
-    @url = url.gsub(/\?.*/, "").chomp("/")
+    @url = url.gsub(/\?.*/, "").gsub(/\#.*/, "").chomp("/")
     @visited = false
     @pages = []
-    @rank = 1
-    @next_rank = 1
+    @rank = 1 - FADING
+    @next_rank = @rank
   end
 
   def out_rank
@@ -20,6 +20,7 @@ class Page
 
   def update_rank!
     self.rank = next_rank
+    self.next_rank = 1 - FADING
   end
 
   def valid?
