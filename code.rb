@@ -8,6 +8,6 @@ parser.perform!
 pages = parser.pages
 
 pages.sort_by! { |page| -page.rank }
-pages.each.with_index do |page, index|
+pages.each do |page|
   puts "#{page.rank.round(ROUND_NUMBERS)}: #{page.url}"
 end

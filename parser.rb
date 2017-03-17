@@ -60,32 +60,21 @@ class Parser
       end
     end
 
-    pages.shuffle!
+    pages.each do |current_page|
+      current_page.pages &= pages
 
-    pages.each.with_index do |current_page, index|
-      current_page.pages = pages & current_page.pages
-
-      self.matrix[index] = pages.map do |page|
-        current_page.pages.include?(page) ? 1 : 0
-      end
+      edges = current_page.pages.map { |page| [current_page, page] }
+      matrix.concat(edges)
     end
 
-    self.matrix = matrix.transpose
-
     100.times do
-      pages.each.with_index do |page, current_index|
-        matrix[current_index].each.with_index do |elem, index|
-          pages[current_index].next_rank += pages[index].out_rank if elem == 1
+      pages.each do |page|
+        matrix.each do |edge|
+          page.next_rank += edge.first.out_rank if edge.last == page
         end
       end
 
       pages.each(&:update_rank!)
     end
-  end
-
-  def keep_building?
-    return true if pages.empty?
-
-    !pages.all?(&:visited?)
   end
 end
