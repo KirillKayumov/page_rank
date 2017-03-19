@@ -1,11 +1,11 @@
-require_relative "parser"
+require_relative "parallel_parser"
 
 ROUND_NUMBERS = 3
 
 parser = nil
 
 benchmark = Benchmark.measure do
-  parser = Parser.new("https://meduza.io")
+  parser = ParallelParser.new("https://meduza.io")
   parser.perform!
 end
 

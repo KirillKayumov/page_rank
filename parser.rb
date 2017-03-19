@@ -1,8 +1,9 @@
 require "uri"
 require "open-uri"
-require 'open_uri_redirections'
+require "open_uri_redirections"
 require "nokogiri"
 require "pry"
+require "benchmark"
 
 require_relative "page"
 
