@@ -1,9 +1,8 @@
 require "uri"
 require "open-uri"
 require "open_uri_redirections"
-require "nokogiri"
-require "pry"
-require "benchmark"
+require "nokogiri" # парсить HTML страницы
+require "benchmark" # замерять время выполнения кода
 
 require_relative "page"
 
@@ -11,10 +10,10 @@ class Parser
   attr_accessor :matrix, :pages, :domain, :host
 
   def initialize(domain)
-    @domain = domain
-    @host = URI.parse(domain).host
-    @matrix = []
-    @pages = []
+    @domain = domain # https://meduza.io
+    @host = URI.parse(domain).host # meduza
+    @matrix = [] # список рёбер
+    @pages = [] # cписок всех страниц (вершин графа)
   end
 
   def perform!
@@ -30,16 +29,22 @@ class Parser
     index = 0
     puts "PARSING..."
 
+    # begin ... rescure
+    # try ... catch
     while index < pages.size
       begin
         current_page = pages[index]
         document = Nokogiri::HTML(open(current_page.url, allow_redirections: :all))
         puts "#{index + 1}: #{current_page.url}"
 
-        pages_on_current_page = document.css("a").map do |link|
+        pages_on_current_page = document.css("a").map do |link| # link – Nokogiri-шный объект с аттрибутами (href)
           begin
-            href = link[:href]&.strip
-            url = if href =~ /^\//
+            # href:
+            # 1. /news
+            # 2. http://lenta.ru/news
+            # 3. nil
+            href = link[:href]&.strip # :lol – символ lol, strip – удаление пробелов в конце и в начале, &. – позволяет вызвать метод на nil
+            url = if href =~ /^\// # =~ – проверка строки на регулярку
               domain + href
             elsif URI.parse(href).host == host
               href
@@ -49,11 +54,11 @@ class Parser
           end
 
           page = Page.new(url)
-          next if !page.valid? || page.url == current_page.url
+          next if !page.valid? || page.url == current_page.url # next – выйти из блока
           page
-        end.compact.uniq
+        end.compact.uniq # compact – удаляет всё nil из массива, uniq – оставляет только уникальные pages
 
-        pages.concat(pages_on_current_page).uniq! if pages.size < 100
+        pages.concat(pages_on_current_page).uniq! if pages.size < 100 # присоединяет массив к массиву
         current_page.pages = pages_on_current_page
         index += 1
       rescue OpenURI::HTTPError
@@ -62,7 +67,7 @@ class Parser
     end
 
     pages.each do |current_page|
-      current_page.pages &= pages
+      current_page.pages &= pages # &= – пересечение массивов, a &= b : a = a & b
 
       edges = current_page.pages.map { |page| [current_page, page] }
       matrix.concat(edges)

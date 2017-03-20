@@ -1,13 +1,13 @@
 class Page
-  attr_reader :url
-  attr_accessor :visited, :pages, :rank, :next_rank
+  attr_reader :url # создаём геттер
+  attr_accessor :visited, :pages, :rank, :next_rank # создаёт геттер и сеттер
 
   FADING = 0.85
 
   def initialize(url)
     return unless url
 
-    @url = url.gsub(/\?.*/, "").gsub(/\#.*/, "").chomp("/")
+    @url = url.gsub(/\?.*/, "").gsub(/\#.*/, "").chomp("/") # gsub – земенает в строке первое на второе, chomp – убрать символ с конца
     @visited = false
     @pages = []
     @rank = 1 - FADING
